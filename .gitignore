@@ -1,0 +1,11 @@
+*.pyc
+*~
+*.DS_Store
+*.swp
+*.out
+
+env
+var/*.db
+var/*.ofx
+var/*.log
+.pytest_cache/
