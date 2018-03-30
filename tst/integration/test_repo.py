@@ -10,7 +10,7 @@ class IntegrationTestRepo(FlaskTestCase):
 
     def test_references(self):
         data = self.get_json("/repo/%s/" % self.url)
-        assert data['refs'] == ['master', 'test-branch']
+        assert set(data['refs']) == set(['master', 'test-branch'])
 
 
 if __name__ == '__main__':
