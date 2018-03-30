@@ -8,12 +8,11 @@ repo_routes = Blueprint('repo_routes', __name__)
 def repo_home(repo):
     repository = Repository(repo)
     refs = repository.list_references()
-    return jsonify({'refs': list(refs.keys())})
+    return jsonify({'refs': refs})
 
 @repo_routes.route("/repo/<path:repo>/ref/<ref>")
 def repo_reference(repo, ref):
     repository = Repository(repo)
-
-    refs = repository.list_references()
-    return jsonify({'refs': list(refs.keys())})
+    repository.update()
+    return jsonify({'repo': 'asdf'})
 
