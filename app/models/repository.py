@@ -1,6 +1,6 @@
 import subprocess
 from app.util import memcached
-from .cache_folder import CacheFolder
+from ..util.cache_folder import CacheFolder
 from .commit import Commit
 from ..flask_shared import app
 import re, hashlib
@@ -9,7 +9,7 @@ class Repository:
     def __init__(self, url, mc=memcached.shared):
         self.url = url
         self.mc = mc
-        self.cache_folder = CacheFolder()
+        self.path = CacheFolder().get("rep_" + hashlib.sha224(self.url.encode('utf-8')).hexdigest()[:10] + "_" + re.sub(r'\W+', '_', self.url)[:40])
 
     def update(self):
         key = "repository_update::" + self.url
@@ -23,7 +23,7 @@ class Repository:
         if result.returncode == 0:
             result = self.run(['git', 'fetch', '--all'])
         else:
-            app.logger.info("Checking out new repo to %s" % self.get_cached_folder())
+            app.logger.info("Checking out new repo to %s" % self.path)
             result = self.run(['git', 'clone', self.url, '.'])
 
         if result.returncode != 0:
@@ -43,23 +43,11 @@ class Repository:
             result = self.run(["git", "rev-parse", "origin/" + rev])
         if result.returncode == 0:
             return Commit(self, result.stdout.decode('utf-8').strip(), mc=self.mc)
-        app.logger.warn("Reference %s not found, path %s" % (rev, self.get_path_name()))
+        app.logger.warn("Reference %s not found, path %s" % (rev, self.path))
         raise Exception("Reference %s not found, please try again later if you're sure it exists" % rev)
 
-    # generates a unique but somewhat human-readable string that is safe to use in filesystems
-    def get_path_name(self):
-        hash = hashlib.sha224(self.url.encode('utf-8')).hexdigest()[:10]
-        return "rep_" + hash + "_" + re.sub(r'\W+', '_', self.url)[:40]
-
-    # todo: memoization
-    def get_cached_folder(self):
-        return self.cache_folder.get(self.get_path_name())
-
-    # helper method that executes a command in the local folder
     def run(self, args):
-        cwd = self.get_cached_folder()
-        response = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd)
-        return response
+        return subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=self.path)
 
 
 

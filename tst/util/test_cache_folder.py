@@ -1,6 +1,5 @@
-from app.models.cache_folder import CacheFolder
+from app.util.cache_folder import CacheFolder
 import shutil, tempfile, os
-
 import unittest
 
 class TestCacheFolder(unittest.TestCase):
@@ -24,10 +23,6 @@ class TestCacheFolder(unittest.TestCase):
         self.assertFalse(self.cf.exists("something"));
         self.cf.get("something")
         self.assertTrue(self.cf.exists("something"));
-
-
-
-
 
 if __name__ == '__main__':
     unittest.main()

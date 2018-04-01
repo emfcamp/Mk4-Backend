@@ -14,7 +14,7 @@ class TestRepository(unittest.TestCase):
         self.repo = Repository(self.test_repo_url, mc=self.mc)
 
     def tearDown(self):
-        shutil.rmtree(self.repo.get_cached_folder())
+        shutil.rmtree(self.repo.path)
         self.fake_git.clean_up()
 
     def test_url(self):
@@ -22,12 +22,12 @@ class TestRepository(unittest.TestCase):
 
     def test_update_creates_git_directory(self):
         self.repo.update()
-        self.assertEqual(os.path.isdir(self.repo.get_cached_folder() + "/.git"), True)
+        self.assertEqual(os.path.isdir(self.repo.path + "/.git"), True)
 
     def test_update_bails_if_called_recently(self):
         self.mc.get = Mock(return_value="foo")
         self.repo.update()
-        self.assertEqual(os.path.isdir(self.repo.get_cached_folder() + "/.git"), False)
+        self.assertEqual(os.path.isdir(self.repo.path + "/.git"), False)
 
     def test_update_failure(self):
         self.repo = Repository("https://github.com/does/not/exist.git", mc=self.mc)
@@ -39,9 +39,9 @@ class TestRepository(unittest.TestCase):
         references = self.repo.list_references()
         self.assertEqual(set(references), set(['merge-master', "master", "merge-standard", "merge-conflict"]))
 
-    def test_path_name(self):
+    def test_path_is_always_the_same(self):
         other_repo = Repository(self.test_repo_url)
-        self.assertEqual(self.repo.get_path_name(), other_repo.get_path_name())
+        self.assertEqual(self.repo.path, other_repo.path)
 
     def test_get_commit_with_branch(self):
         references = self.repo.get_commit("merge-master")
