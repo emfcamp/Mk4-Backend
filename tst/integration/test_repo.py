@@ -13,7 +13,10 @@ class IntegrationTestRepo(FlaskTestCase):
 
     def test_checkout_with_error(self):
         data = self.get_json("/repo/%s/ref/%s" % (self.url, "d816b06e0c58b15a7453480d165020d784f9dde6"))
-        self.assertIn("Validation Error for libs/db.py: description metadata field is required but not found", data['errors'])
+        self.assertEqual(data['errors'][0], {
+            "message": "description metadata field is required but not found",
+            "name": "updater/main.py"
+        })
 
 
 if __name__ == '__main__':
