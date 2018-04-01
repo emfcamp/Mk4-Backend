@@ -111,7 +111,7 @@ class Library:
         # resolve app dependencies and check size
         for app, info in apps.items():
             main_file = '%s/main.py' % app
-            if 'description' not in info:
+            if main_file not in hashes:
                 errors.append(ValidationError(main_file, 'main.py file not provided'))
                 continue
 
@@ -119,13 +119,14 @@ class Library:
                 errors.append(ValidationError(main_file, "App %s is a total of %d bytes, allowed maximum is %d" % (app, info['size'], max_app_size_before_dependencies)))
                 continue
 
-            for dependency in info['dependencies']:
-                if dependency not in libs:
-                    errors.append(ValidationError(main_file, "Dependency not found: %s" % dependency))
-                    continue
-
+            if 'dependencies' in info:
                 for dependency in info['dependencies']:
-                    info['files'].update(libs[dependency]['files'])
+                    if dependency not in libs:
+                        errors.append(ValidationError(main_file, "Dependency not found: %s" % dependency))
+                        continue
+
+                    for dependency in info['dependencies']:
+                        info['files'].update(libs[dependency]['files'])
 
         if errors:
             self.mc.set(key, [None, None, errors])

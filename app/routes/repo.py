@@ -15,7 +15,11 @@ def repo_reference(repo, ref):
     library = Repository(repo).get_commit(ref).get_library()
     library.scan()
     if library.errors:
-        errors = [{'name': e.name, 'message': e.message} for e in library.errors]
+        errors = {}
+        for error in library.errors:
+            if error.name not in errors:
+                errors[error.name] = []
+            errors[error.name].append(error.message)
         return jsonify({'commit_id': library.commit_id, 'errors': errors}), 400
     else:
         return jsonify({'commit_id': library.commit_id, 'libs': library.libs, 'apps': library.apps})
