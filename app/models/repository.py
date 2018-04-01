@@ -22,6 +22,9 @@ class Repository:
         result = self.run(['git', 'status'])
         if result.returncode == 0:
             result = self.run(['git', 'fetch', '--all'])
+            if result.returncode == 0:
+                # for branches already checked out, most likely only master
+                result = self.run(['git', 'pull', '--all'])
         else:
             app.logger.info("Checking out new repo to %s" % self.path)
             result = self.run(['git', 'clone', self.url, '.'])

@@ -12,7 +12,11 @@ def repo_home(repo):
 
 @repo_routes.route("/repo/<path:repo>/ref/<ref>")
 def repo_reference(repo, ref):
-    repository = Repository(repo)
-    repository.update()
-    return jsonify({'repo': 'asdf'})
+    library = Repository(repo).get_commit(ref).get_library()
+    library.scan()
+    if library.errors:
+        errors = [str(e) for e in library.errors]
+        return jsonify({'commit_id': library.commit_id, 'errors': errors}), 400
+    else:
+        return jsonify({'commit_id': library.commit_id, 'libs': library.libs, 'apps': library.apps})
 

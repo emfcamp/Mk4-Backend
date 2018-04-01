@@ -36,13 +36,16 @@ class Library:
         key = "library_parse::" + self.commit_id
         cached_result = self.mc.get(key)
         if cached_result:
-            [self.apps, self.libs] = cached_result;
+            [self.apps, self.libs, self.errors] = cached_result;
             return
 
         hashes = self.hasher.get_hashes(self.path)
+        hashes = {k: v for k, v in hashes.items() if "/" in k}
 
         libs = {}
         apps = {}
+        errors = []
+
         for path, hash in hashes.items():
             full_path = "%s/%s" % (self.path, path)
             size = self.sizer.get_size(full_path)
@@ -50,15 +53,22 @@ class Library:
                 # validate filename
                 matches = lib_path_pattern.match(path)
                 if not matches:
-                    raise ValidationError(path, "Library file validation failed: %s is not a valid library file name" % path)
+                    errors.append(ValidationError(path, "Library file validation failed: %s is not a valid library file name" % path))
+                    continue
 
-                libs[matches.group(1)] = self.metadata_parser.parse(full_path, path, lib_metadata_rules)
+                result = self.metadata_parser.parse(full_path, path, lib_metadata_rules)
+                if isinstance(result, list):
+                    errors.extend(result)
+                    continue
+
+                libs[matches.group(1)] = result
                 libs[matches.group(1)]['hash'] = hash
                 libs[matches.group(1)]['size'] = size
             else:
                 matches = app_path_pattern.match(path)
                 if not matches:
-                    raise ValidationError(path, "Invalid path")
+                    errors.append(ValidationError(path, "Invalid path"))
+                    continue
 
                 app_name = matches.group(1)
                 file_name = matches.group(2)
@@ -67,16 +77,23 @@ class Library:
                     apps[app_name] = {'files': {}, 'size': 0}
 
                 if file_name == 'main.py':
-                    apps[app_name].update(self.metadata_parser.parse(full_path, path, app_metadata_rules))
+                    result = self.metadata_parser.parse(full_path, path, app_metadata_rules)
+                    if isinstance(result, list):
+                        errors.extend(result)
+                        continue
+                    apps[app_name].update(result)
 
                 apps[app_name]['files'][path] = hash
                 apps[app_name]['size'] += size
 
         # validate lib dependencies
         for lib, info in libs.items():
-            for dependency in info['dependencies']:
-                if dependency not in libs:
-                    raise ValidationError('libs/%s.py' % lib, "Dependency not found: %s" % dependency)
+            dependencies_not_found = [d for d in info['dependencies'] if d not in libs]
+            if dependencies_not_found:
+                errors.append(ValidationError('libs/%s.py' % lib, "Dependencies not found: %s" % dependencies_not_found))
+                continue
+
+
             # resolve dependencies
             info['files'] = {}
             to_be_added = set([lib])
@@ -84,28 +101,40 @@ class Library:
             while len(to_be_added) > 0:
                 l = to_be_added.pop()
                 path = "libs/%s.py" % l
+                print(info['dependencies'], hashes)
                 info['files'][path] = hashes[path]
                 resolved_dependencies.add(l)
                 for required_lib in libs[l]['dependencies']:
                     if required_lib not in resolved_dependencies:
                         to_be_added.add(required_lib)
 
-
-
         # resolve app dependencies and check size
         for app, info in apps.items():
+            main_file = '%s/main.py' % app
+            if 'description' not in info:
+                errors.append(ValidationError(main_file, 'main.py file not provided'))
+                continue
+
             if info['size'] > max_app_size_before_dependencies:
-                raise ValidationError('%s/main.py' % app, "App %s is a total of %d bytes, allowed maximum is %d" % (app, info['size'], max_app_size_before_dependencies))
+                errors.append(ValidationError(main_file, "App %s is a total of %d bytes, allowed maximum is %d" % (app, info['size'], max_app_size_before_dependencies)))
+                continue
 
             for dependency in info['dependencies']:
                 if dependency not in libs:
-                    raise ValidationError('%s/main.py' % app, "Dependency not found: %s" % dependency)
+                    errors.append(ValidationError(main_file, "Dependency not found: %s" % dependency))
+                    continue
 
-            for dependency in info['dependencies']:
-                info['files'].update(libs[dependency]['files'])
+                for dependency in info['dependencies']:
+                    info['files'].update(libs[dependency]['files'])
 
-        self.mc.set(key, [apps, libs])
-
-        # do this at the end to avoid problems in case of a race condition
-        self.libs = libs
-        self.apps = apps
+        if errors:
+            self.mc.set(key, [None, None, errors])
+            # do this at the end to avoid problems in case of a race condition
+            self.libs = None
+            self.apps = None
+            self.errors = errors
+        else:
+            self.mc.set(key, [apps, libs, None])
+            self.libs = libs
+            self.apps = apps
+            self.errors = None

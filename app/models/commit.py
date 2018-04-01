@@ -1,6 +1,7 @@
 import subprocess, shutil, os
 from ..util.cache_folder import CacheFolder
 from ..flask_shared import app
+from .library import Library
 
 class Commit:
     def __init__(self, repository, id, mc):
@@ -23,4 +24,7 @@ class Commit:
                 # Possible race condition scenario, let's retry
                 self.ensure_existence(retry - 1)
 
+    def get_library(self):
+        self.fetch()
+        return Library(self.id, self.path, self.mc)
 

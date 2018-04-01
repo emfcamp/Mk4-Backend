@@ -31,39 +31,49 @@ print("###somepython")
         });
 
     def test_parse_string_too_short(self):
-        with self.assertRaisesRegexp(ValidationError, 'Validation Error for foo.py: description metadata field has a minimum length of 5, provided: 1'):
-            self.parser.parse_str("""### description: s
+        result = self.parser.parse_str("""### description: s
 ### categories: CategoryForApp1, SecondaryCategory
 ### dependencies: lib2, lib3
 """, "foo.py", self.rules)
+        self.assertEqual(result, [
+            ValidationError("foo.py", "description metadata field has a minimum length of 5, provided: 1")
+        ])
 
     def test_parse_string_too_long(self):
-        with self.assertRaisesRegexp(ValidationError, 'Validation Error for foo.py: description metadata field has a maximum length of 20, provided: 45'):
-            self.parser.parse_str("""### description: aasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdf
+        result = self.parser.parse_str("""### description: aasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdf
 ### categories: CategoryForApp1, SecondaryCategory
 ### dependencies: lib2, lib3
 """, "foo.py", self.rules)
+        self.assertEqual(result, [
+            ValidationError('foo.py', 'description metadata field has a maximum length of 20, provided: 45')
+        ])
 
     def test_parse_list_too_short(self):
-        with self.assertRaisesRegexp(ValidationError, 'Validation Error for foo.py: categories metadata field has a minimum length of 1, provided: 0'):
-            self.parser.parse_str("""### description: Some description
+        result = self.parser.parse_str("""### description: Some description
 ### categories:
 ### dependencies: lib2, lib3
 """, "foo.py", self.rules)
+        self.assertEqual(result, [
+            ValidationError('foo.py', 'categories metadata field has a minimum length of 1, provided: 0')
+        ])
 
     def test_parse_list_too_long(self):
-        with self.assertRaisesRegexp(ValidationError, 'Validation Error for foo.py: categories metadata field has a maximum length of 3, provided: 4'):
-            self.parser.parse_str("""### description: Some description
+        result = self.parser.parse_str("""### description: Some description
 ### categories: c1,c2,c3,c4
 ### dependencies: lib2, lib3
 """, "foo.py", self.rules)
+        self.assertEqual(result, [
+            ValidationError('foo.py', 'categories metadata field has a maximum length of 3, provided: 4')
+        ])
 
     def test_parse_list_too_long(self):
-        with self.assertRaisesRegexp(ValidationError, 'Validation Error for foo.py: categories metadata field has a maximum length of 3, provided: 4'):
-            self.parser.parse_str("""### description: Some description
+        result = self.parser.parse_str("""### description: Some description
 ### categories: c1,c2,c3,c4
 ### dependencies: lib2, lib3
 """, "foo.py", self.rules)
+        self.assertEqual(result, [
+            ValidationError('foo.py', 'categories metadata field has a maximum length of 3, provided: 4')
+        ])
 
     def test_parse_default(self):
         result = self.parser.parse_str("""### description: Some description
@@ -86,19 +96,29 @@ print("###somepython")
         self.assertEqual(result['built-in'], False)
 
     def test_parse_boolean_error(self):
-        with self.assertRaisesRegexp(ValidationError, 'Validation Error for foo.py: built-in metadata field has to be a boolean, please provide \'yes\' or \'no\''):
-            self.parser.parse_str("""### description: Some description
+        result = self.parser.parse_str("""### description: Some description
 ### categories: c1
 ### built-in: something
 """, "foo.py", self.rules)
+        self.assertEqual(result, [
+            ValidationError('foo.py', 'built-in metadata field has to be a boolean, please provide \'yes\' or \'no\'')
+        ])
 
     def test_parse_required_error(self):
-        with self.assertRaisesRegexp(ValidationError, 'Validation Error for foo.py: categories metadata field is required but not found'):
-            self.parser.parse_str("""### description: Some description""", "foo.py", self.rules)
+        result = self.parser.parse_str("""### description: Some description""", "foo.py", self.rules)
+        self.assertEqual(result, [
+            ValidationError('foo.py', 'categories metadata field is required but not found')
+        ])
 
     def test_parse_invalid_field_error(self):
-        with self.assertRaisesRegexp(ValidationError, "foo is not an allowed metadata field: \['built-in', 'categories', 'dependencies', 'description']"):
-            self.parser.parse_str("""### foo: bar""", "foo.py", self.rules)
+        result = self.parser.parse_str("""### description: Some description
+### foo: something
+### categories: c1
+### built-in: NO
+""", "foo.py", self.rules)
+        self.assertEqual(result, [
+            ValidationError('foo.py', "foo is not an allowed metadata field: ['built-in', 'categories', 'dependencies', 'description']")
+        ])
 
     def test_parse_with_file(self):
         result = self.parser.parse(normpath(dirname(realpath(__file__)) + "/../fixtures/library/app1/main.py"), 'app1/main.py', self.rules)
