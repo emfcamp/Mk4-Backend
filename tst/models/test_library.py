@@ -172,14 +172,14 @@ class TestLibrary(unittest.TestCase):
         def metadata_side_effect(*args, **kwargs):
             if args[0] == '/some/path/app1/main.py':
                 return {
-                    'description': 'fail',
-                    'dependencies': ['some-unkown-lib']
+                    'description': 'foo',
+                    'dependencies': []
                 }
         self.metadata_parser.parse = Mock(side_effect=metadata_side_effect)
-        self.sizer.get_size = Mock(return_value=4004)
+        self.sizer.get_size = Mock(return_value=999999999)
         self.library.scan()
         self.assertSequenceEqual(self.library.errors, [
-            ValidationError('app1/main.py', 'App app1 is a total of 4004 bytes, allowed maximum is 4000')
+            ValidationError('app1/main.py', 'App app1 is a total of 999999999 bytes, allowed maximum is 30000')
         ])
 
     def test_scan_validation_lib_filename(self):

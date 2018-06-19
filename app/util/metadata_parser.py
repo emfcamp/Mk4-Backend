@@ -21,7 +21,7 @@ class MetadataParser:
             matches = self.line_pattern.match(line)
             if matches == None:
                 break
-            key = matches.group(1)
+            key = matches.group(1).lower()
             value = matches.group(2)
 
             if key not in rules:

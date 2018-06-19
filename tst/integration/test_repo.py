@@ -15,7 +15,7 @@ class IntegrationTestRepo(FlaskTestCase):
         data = self.get_json("/repo/%s/ref/%s" % (self.url, "d816b06e0c58b15a7453480d165020d784f9dde6"))
         self.assertEqual(set(data['errors']['homescreen/main.py']), set([
             "description metadata field is required but not found",
-            "categories metadata field is required but not found"
+            "license metadata field is required but not found"
         ]))
 
 

@@ -1,6 +1,7 @@
 ### description: Description of App2
 ### categories: CategoryForApp2, SecondaryCategory
 ### dependencies: lib2, lib3
+### license: MIT
 
 import ugfx, pyb, buttons
 

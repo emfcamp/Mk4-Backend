@@ -10,15 +10,17 @@ lib_path_pattern = re.compile(r"^libs/([a-zA-Z0-9_\-]{2,20})\.py$")
 app_path_pattern = re.compile(r"([a-zA-Z0-9_\-]{2,20})/([a-zA-Z0-9_\/\-\.]{2,40})$")
 lib_metadata_rules = {
     'description': {'type': 'string', 'required': True, 'min': 5, 'max': 200},
-    'dependencies': {'type': 'list', 'default': [], 'max': 10}
+    'dependencies': {'type': 'list', 'default': [], 'max': 10},
+    'license': {'type': 'string', 'required': True, 'min':1, 'max': 140}
 }
 app_metadata_rules = {
     'description': {'type': 'string', 'required': True, 'min': 5, 'max': 200},
-    'categories': {'type': 'list', 'required': True, 'min': 1, 'max': 3},
+    'categories': {'type': 'list', 'min': 1, 'max': 3},
     'dependencies': {'type': 'list', 'default': [], 'max': 10},
-    'built-in': {'type': 'boolean', 'default': False}
+    'built-in': {'type': 'boolean', 'default': False},
+    'license': {'type': 'string', 'required': True, 'min':1, 'max': 140}
 }
-max_app_size_before_dependencies = 4000
+max_app_size_before_dependencies = 30000 # we should really get this down
 
 # Abstraction on top of a particular commit, acts like a parser on top of a folder
 # Main functionality is dependency resolution and validation
@@ -115,6 +117,7 @@ class Library:
                 errors.append(ValidationError(main_file, 'main.py file not provided'))
                 continue
 
+            print(info['size'], max_app_size_before_dependencies)
             if info['size'] > max_app_size_before_dependencies:
                 errors.append(ValidationError(main_file, "App %s is a total of %d bytes, allowed maximum is %d" % (app, info['size'], max_app_size_before_dependencies)))
                 continue
@@ -128,6 +131,7 @@ class Library:
                     for dependency in info['dependencies']:
                         info['files'].update(libs[dependency]['files'])
 
+        print(errors)
         if errors:
             self.mc.set(key, [None, None, errors])
             # do this at the end to avoid problems in case of a race condition

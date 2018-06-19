@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, Blueprint
+from flask import Flask, jsonify, Blueprint, request
 from ..models.repository import Repository
 from ..flask_shared import app
 
@@ -23,4 +23,3 @@ def repo_reference(repo, ref):
         return jsonify({'commit_id': library.commit_id, 'errors': errors}), 400
     else:
         return jsonify({'commit_id': library.commit_id, 'libs': library.libs, 'apps': library.apps})
-

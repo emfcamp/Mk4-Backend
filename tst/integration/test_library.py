@@ -15,6 +15,7 @@ class TestLibraryIntegration(unittest.TestCase):
 
     def test_scan(self):
         self.library.scan()
+        print(self.library.libs)
         self.assertEqual(set(self.library.libs.keys()), set(["lib1", "lib2", "lib3", "lib4", "lib5"]))
 
 

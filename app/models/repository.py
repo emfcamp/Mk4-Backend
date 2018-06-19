@@ -3,7 +3,7 @@ from app.util import memcached
 from ..util.cache_folder import CacheFolder
 from .commit import Commit
 from ..flask_shared import app
-import re, hashlib
+import re, hashlib, shutil
 
 class Repository:
     def __init__(self, url, mc=memcached.shared):
@@ -11,7 +11,7 @@ class Repository:
         self.mc = mc
         self.path = CacheFolder().get("rep_" + hashlib.sha224(self.url.encode('utf-8')).hexdigest()[:10] + "_" + re.sub(r'\W+', '_', self.url)[:40])
 
-    def update(self):
+    def update(self, retry=True):
         key = "repository_update::" + self.url
         if self.mc.get(key):
             # skipping update since we've already done so recently
@@ -21,15 +21,27 @@ class Repository:
 
         result = self.run(['git', 'status'])
         if result.returncode == 0:
+            # We already have a repo
             result = self.run(['git', 'fetch', '--all'])
             if result.returncode == 0:
                 # for branches already checked out, most likely only master
                 result = self.run(['git', 'pull', '--all'])
+            if result.returncode != 0:
+                app.logger.info("There was a problem updating an existing repo: %s" % result)
+                if retry:
+                    # Something went wrong. Nuke the repo and try again
+                    app.logger.info("Clearing folder %s and trying again" % self.path)
+                    shutil.rmtree(self.path)
+                    self.update(False)
+                else:
+                    app.logger.error("We've already retried, giving up")
+                    raise Exception("Repository %s is unavailable or invalid" % self.url)
         else:
             app.logger.info("Checking out new repo to %s" % self.path)
             result = self.run(['git', 'clone', self.url, '.'])
 
         if result.returncode != 0:
+            app.logger.warn(result)
             raise Exception("Repository %s is unavailable or invalid" % self.url)
 
     def list_references(self):

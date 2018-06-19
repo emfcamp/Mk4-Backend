@@ -10,7 +10,8 @@ class TestMetadataParser (unittest.TestCase):
             'description': {'type': 'string', 'required': True, 'min': 5, 'max': 20},
             'categories': {'type': 'list', 'required': True, 'min': 1, 'max': 3},
             'dependencies': {'type': 'list', 'default': [], 'max': 10},
-            'built-in': {'type': 'boolean', 'default': False}
+            'built-in': {'type': 'boolean', 'default': False},
+            'license': {'type': 'string'}
         }
 
     def test_parse_with_metadata(self):
@@ -117,11 +118,12 @@ print("###somepython")
 ### built-in: NO
 """, "foo.py", self.rules)
         self.assertEqual(result, [
-            ValidationError('foo.py', "foo is not an allowed metadata field: ['built-in', 'categories', 'dependencies', 'description']")
+            ValidationError('foo.py', "foo is not an allowed metadata field: ['built-in', 'categories', 'dependencies', 'description', 'license']")
         ])
 
     def test_parse_with_file(self):
         result = self.parser.parse(normpath(dirname(realpath(__file__)) + "/../fixtures/library/app1/main.py"), 'app1/main.py', self.rules)
+        print(result)
         self.assertEqual(result['description'], 'Description of App1');
 
 

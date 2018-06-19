@@ -2,6 +2,7 @@
 ### categories: CategoryForApp1, SecondaryCategory
 ### built-in: yes
 ### dependencies: lib1, lib3
+### license: MIT
 
 import ugfx, pyb, buttons
 
