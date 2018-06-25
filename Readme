@@ -1,0 +1,13 @@
+To set up env:
+
+$ pipenv shell
+$ pipenv install
+$ brew services start memcached # or whatever else you need to run to get memcached running
+
+To run server:
+
+$ ./run
+
+To run test:
+
+$ pytest tst
