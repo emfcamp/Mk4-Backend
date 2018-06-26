@@ -131,7 +131,6 @@ class Library:
                     for dependency in info['dependencies']:
                         info['files'].update(libs[dependency]['files'])
 
-        print(errors)
         if errors:
             self.mc.set(key, [None, None, errors])
             # do this at the end to avoid problems in case of a race condition
@@ -143,3 +142,21 @@ class Library:
             self.libs = libs
             self.apps = apps
             self.errors = None
+
+    def get_compact_errors(self):
+        errors = {}
+        for error in self.errors:
+            if error.name not in errors:
+                errors[error.name] = []
+            errors[error.name].append(error.message)
+        return errors
+
+    def get_apps_by_category(self):
+        categories = {}
+        for app_name, app in self.apps.items():
+            if 'categories' in app:
+                for category in app['categories']:
+                    if category not in categories:
+                        categories[category] = []
+                    categories[category].append(app_name)
+        return categories

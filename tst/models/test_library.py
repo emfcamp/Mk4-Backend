@@ -200,5 +200,22 @@ class TestLibrary(unittest.TestCase):
             ValidationError('app1/ma$in.py', 'Invalid path')
         ])
 
+    def test_compact_errors(self):
+        self.library.errors = [
+            ValidationError('foo.py', 'error1'),
+            ValidationError('bar.py', 'error2'),
+            ValidationError('foo.py', 'error3')
+        ]
+        self.assertEqual(self.library.get_compact_errors(), {'foo.py': ['error1', 'error3'], 'bar.py': ['error2']})
+
+    def test_get_apps_by_category(self):
+        self.library.apps = {
+            'app1': {'categories': ["bar", "foo"]},
+            'app2': {'categories': ["bar"]},
+            'app3': {}
+        }
+        self.assertEqual(self.library.get_apps_by_category(), {'bar': ['app1', 'app2'], 'foo': ['app1']})
+
+
 if __name__ == '__main__':
     unittest.main()
