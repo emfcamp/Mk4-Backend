@@ -61,4 +61,4 @@ def get_library(repo, ref):
     return library;
 
 def handle_ref_error(library):
-    return jsonify({'commit_id': library.commit_id, 'errors': library.compact_errors()}), 400
+    return jsonify({'commit_id': library.commit_id, 'errors': library.get_compact_errors()}), 400
