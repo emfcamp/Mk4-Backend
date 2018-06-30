@@ -216,8 +216,8 @@ class TestLibrary(unittest.TestCase):
         }
         result = self.library.get_apps_by_category()
 
-        self.assertSequenceEqual(result['bar'], ['app1', 'app2'])
-        self.assertSequenceEqual(result['foo'], ['app1'])
+        self.assertCountEqual(result['bar'], ['app1', 'app2'])
+        self.assertCountEqual(result['foo'], ['app1'])
 
 
 if __name__ == '__main__':
