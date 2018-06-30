@@ -25,7 +25,9 @@ class TestCommit (unittest.TestCase):
 
     def test_fetch(self):
         self.commit.fetch()
-        self.assertTrue(os.path.exists(self.commit.path + "/file_1.md"));
+        print(self.commit.path)
+        self.assertTrue(os.path.exists(self.commit.path + "/README.md"))
+        self.assertFalse(os.path.exists(self.commit.path + "/file_1.md"))
 
 if __name__ == '__main__':
     unittest.main()

@@ -4,6 +4,7 @@ from ..util.cache_folder import CacheFolder
 from .commit import Commit
 from ..flask_shared import app
 import re, hashlib, shutil
+from ..util.lock_pool import shared_lock
 
 class Repository:
     def __init__(self, url, mc=memcached.shared):
@@ -16,43 +17,47 @@ class Repository:
 
     def update(self, retry=True):
         key = "repository_update::" + self.url
-        cached = self.mc.get(key)
-        if cached:
-            # skipping update since we've already done so recently
-            if cached == "invalid":
-                raise Exception("Repository %s is unavailable or invalid" % self.url)
-            return
 
-        app.logger.info("Updating repo %s" % self.url)
-
-        result = self.run(['git', '-c', 'core.askpass=true', 'status'])
-        if result.returncode == 0:
-            # We already have a repo
-            result = self.run(['git', '-c', 'core.askpass=true', 'fetch', '--all'])
-            if result.returncode == 0:
-                # for branches already checked out, most likely only master
-                result = self.run(['git', '-c', 'core.askpass=true', 'pull', '--all'])
-            if result.returncode != 0:
-                app.logger.info("There was a problem updating an existing repo: %s" % result)
-                if retry:
-                    # Something went wrong. Nuke the repo and try again
-                    app.logger.info("Clearing folder %s and trying again" % self.path)
-                    shutil.rmtree(self.path)
-                    self.update(False)
-                else:
-                    app.logger.error("We've already retried, giving up")
-                    self.mc.set(key, "invalid", time=60)
+        # Use a lock to avoid multiple requests entering this block at the same time. I have no
+        # idea how well this will actually work.
+        with shared_lock(key):
+            cached = self.mc.get(key)
+            if cached:
+                # skipping update since we've already done so recently
+                if cached == "invalid":
                     raise Exception("Repository %s is unavailable or invalid" % self.url)
-        else:
-            app.logger.info("Checking out new repo to %s" % self.path)
-            result = self.run(['git', '-c', 'core.askpass=true', 'clone', self.url, '.'])
+                return
 
-        self.mc.set(key, "updated", time=60)
+            app.logger.info("Updating repo %s" % self.url)
 
-        if result.returncode != 0:
-            app.logger.warn(result)
-            self.mc.set(key, "invalid", time=60)
-            raise Exception("Repository %s is unavailable or invalid" % self.url)
+            result = self.run(['git', '-c', 'core.askpass=true', 'status'])
+            if result.returncode == 0:
+                # We already have a repo
+                result = self.run(['git', '-c', 'core.askpass=true', 'fetch', '--all'])
+                if result.returncode == 0:
+                    # for branches already checked out, most likely only master
+                    result = self.run(['git', '-c', 'core.askpass=true', 'pull', '--all'])
+                if result.returncode != 0:
+                    app.logger.info("There was a problem updating an existing repo: %s" % result)
+                    if retry:
+                        # Something went wrong. Nuke the repo and try again
+                        app.logger.info("Clearing folder %s and trying again" % self.path)
+                        shutil.rmtree(self.path)
+                        self.update(False)
+                    else:
+                        app.logger.error("We've already retried, giving up")
+                        self.mc.set(key, "invalid", time=60)
+                        raise Exception("Repository %s is unavailable or invalid" % self.url)
+            else:
+                app.logger.info("Checking out new repo to %s" % self.path)
+                result = self.run(['git', '-c', 'core.askpass=true', 'clone', self.url, '.'])
+
+            self.mc.set(key, "updated", time=60)
+
+            if result.returncode != 0:
+                app.logger.warn(result)
+                self.mc.set(key, "invalid", time=60)
+                raise Exception("Repository %s is unavailable or invalid" % self.url)
 
     def list_references(self):
         self.update();
