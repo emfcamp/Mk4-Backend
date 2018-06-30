@@ -19,3 +19,6 @@ shell:
 test:
 	SETTINGS_FILE=$(TEST_SETTINGS) pipenv run pytest ./tst
 
+flush_memcached:
+	echo 'flush_all' | nc localhost 11211
+
