@@ -16,19 +16,22 @@ class Repository:
 
     def update(self, retry=True):
         key = "repository_update::" + self.url
-        if self.mc.get(key):
+        cached = self.mc.get(key)
+        if cached:
             # skipping update since we've already done so recently
+            if cached == "invalid":
+                raise Exception("Repository %s is unavailable or invalid" % self.url)
             return
-        app.logger.info("Updating repo %s" % self.url)
-        self.mc.set(key, "updated", time=60)
 
-        result = self.run(['git', 'status'])
+        app.logger.info("Updating repo %s" % self.url)
+
+        result = self.run(['git', '-c', 'core.askpass=true', 'status'])
         if result.returncode == 0:
             # We already have a repo
-            result = self.run(['git', 'fetch', '--all'])
+            result = self.run(['git', '-c', 'core.askpass=true', 'fetch', '--all'])
             if result.returncode == 0:
                 # for branches already checked out, most likely only master
-                result = self.run(['git', 'pull', '--all'])
+                result = self.run(['git', '-c', 'core.askpass=true', 'pull', '--all'])
             if result.returncode != 0:
                 app.logger.info("There was a problem updating an existing repo: %s" % result)
                 if retry:
@@ -38,13 +41,17 @@ class Repository:
                     self.update(False)
                 else:
                     app.logger.error("We've already retried, giving up")
+                    self.mc.set(key, "invalid", time=60)
                     raise Exception("Repository %s is unavailable or invalid" % self.url)
         else:
             app.logger.info("Checking out new repo to %s" % self.path)
-            result = self.run(['git', 'clone', self.url, '.'])
+            result = self.run(['git', '-c', 'core.askpass=true', 'clone', self.url, '.'])
+
+        self.mc.set(key, "updated", time=60)
 
         if result.returncode != 0:
             app.logger.warn(result)
+            self.mc.set(key, "invalid", time=60)
             raise Exception("Repository %s is unavailable or invalid" % self.url)
 
     def list_references(self):
@@ -55,10 +62,10 @@ class Repository:
 
     def get_commit(self, rev):
         self.update()
-        result = self.run(["git", "rev-parse", rev])
+        result = self.run(["git", '-c', 'core.askpass=true', "rev-parse", rev])
         if result.returncode != 0:
             # in case of non-master branches or tags
-            result = self.run(["git", "rev-parse", "origin/" + rev])
+            result = self.run(["git", '-c', 'core.askpass=true', "rev-parse", "origin/" + rev])
         if result.returncode == 0:
             return Commit(self, result.stdout.decode('utf-8').strip(), mc=self.mc)
         app.logger.warn("Reference %s not found, path %s" % (rev, self.path))
