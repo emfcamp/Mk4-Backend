@@ -103,7 +103,6 @@ class Library:
             while len(to_be_added) > 0:
                 l = to_be_added.pop()
                 path = "libs/%s.py" % l
-                print(info['dependencies'], hashes)
                 info['files'][path] = hashes[path]
                 resolved_dependencies.add(l)
                 for required_lib in libs[l]['dependencies']:
@@ -117,7 +116,6 @@ class Library:
                 errors.append(ValidationError(main_file, 'main.py file not provided'))
                 continue
 
-            print(info['size'], max_app_size_before_dependencies)
             if info['size'] > max_app_size_before_dependencies:
                 errors.append(ValidationError(main_file, "App %s is a total of %d bytes, allowed maximum is %d" % (app, info['size'], max_app_size_before_dependencies)))
                 continue
