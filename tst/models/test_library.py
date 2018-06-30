@@ -214,7 +214,10 @@ class TestLibrary(unittest.TestCase):
             'app2': {'categories': ["bar"]},
             'app3': {}
         }
-        self.assertEqual(self.library.get_apps_by_category(), {'bar': ['app1', 'app2'], 'foo': ['app1']})
+        result = self.library.get_apps_by_category()
+
+        self.assertSequenceEqual(result['bar'], ['app1', 'app2'])
+        self.assertSequenceEqual(result['foo'], ['app1'])
 
 
 if __name__ == '__main__':
