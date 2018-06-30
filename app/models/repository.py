@@ -7,6 +7,9 @@ import re, hashlib, shutil
 
 class Repository:
     def __init__(self, url, mc=memcached.shared):
+        # if it doesn't look like a full git url, assume it's github
+        if (not url.startswith("file:")) and (not url.startswith("http:")) and (not url.startswith("https:")) and (not url.startswith("ssh:")):
+            url = "https://github.com/%s.git" % url
         self.url = url
         self.mc = mc
         self.path = CacheFolder().get("rep_" + hashlib.sha224(self.url.encode('utf-8')).hexdigest()[:10] + "_" + re.sub(r'\W+', '_', self.url)[:40])

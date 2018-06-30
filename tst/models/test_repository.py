@@ -20,6 +20,10 @@ class TestRepository(unittest.TestCase):
     def test_url(self):
         self.assertEqual(self.repo.url, self.test_repo_url)
 
+    def test_github_url(self):
+        self.repo = Repository("foo/bar", mc=self.mc)
+        self.assertEqual(self.repo.url, "https://github.com/foo/bar.git")
+
     def test_update_creates_git_directory(self):
         self.repo.update()
         self.assertEqual(os.path.isdir(self.repo.path + "/.git"), True)
