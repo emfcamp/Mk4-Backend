@@ -21,6 +21,7 @@ class Commit:
                 shutil.copytree(self.repository.path, self.path)
                 result = self.run(["git", 'checkout', self.id])
                 if result.returncode > 0:
+                    print(result)
                     raise Exception("Error while trying to checkout %s from repo %s" % (self.id, self.repository.url))
                 try:
                     os.remove(self.path + "/.gitignore")

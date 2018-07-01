@@ -23,6 +23,10 @@ class IntegrationTestRepo(FlaskTestCase):
         data = self.get_json("/repo/%s/ref/%s" % (self.url, "description"))
         self.assertEqual(data['apps']['app_library']['description'], "distinct description");
 
+    def test_github_merge_commit(self):
+        data = self.get_json("/repo/%s/ref/%s" % (self.url, "d88eabb7aec4883dda403c474515a1b912c3a9fd"))
+        self.assertTrue(data['errors']['my_new_app/main.py']);
+
     def test_repo_entry(self):
         data = self.get_json("/repo/%s/ref/%s" % (self.url, "36fb0a853292d61a96438e9c2a307eac1478c4cb"))
         self.assertEqual(data['apps']['app_library']['description'], 'updates and installs apps. To publish apps use https://badge.emfcamp.org')
