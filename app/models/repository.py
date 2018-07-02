@@ -6,8 +6,6 @@ from ..flask_shared import app
 import re, hashlib, shutil
 from ..util.lock_pool import shared_lock
 
-full_sha1_pattern = re.compile("^[0-9a-f]{40}$")
-
 class Repository:
     def __init__(self, url, mc=memcached.shared):
         # if it doesn't look like a full git url, assume it's github
@@ -22,6 +20,7 @@ class Repository:
 
         # Use a lock to avoid multiple requests entering this block at the same time. I have no
         # idea how well this will actually work.
+        result = None
         with shared_lock(key):
             if not force:
                 cached = self.mc.get(key)
@@ -32,32 +31,36 @@ class Repository:
                     return
 
             app.logger.info("Updating repo %s" % self.url)
-
             result = self.run(['git', '-c', 'core.askpass=true', 'status'])
-            if result.returncode == 0:
-                # We already have a repo
-                result = self.run(['git', '-c', 'core.askpass=true', 'fetch', '--all'])
-                if result.returncode == 0:
-                    # for branches already checked out, most likely only master
-                    result = self.run(['git', '-c', 'core.askpass=true', 'pull', '--all'])
-                if result.returncode != 0:
-                    app.logger.info("There was a problem updating an existing repo: %s" % result)
-                    if retry:
-                        # Something went wrong. Nuke the repo and try again
-                        app.logger.info("Clearing folder %s and trying again" % self.path)
-                        shutil.rmtree(self.path)
-                        self.update(False)
-                    else:
-                        app.logger.error("We've already retried, giving up")
-                        self.mc.set(key, "invalid", time=60)
-                        raise Exception("Repository %s is unavailable or invalid" % self.url)
-            else:
+            if result.returncode > 0:
                 app.logger.info("Checking out new repo to %s" % self.path)
                 result = self.run(['git', '-c', 'core.askpass=true', 'clone', self.url, '.'])
+                if result.returncode > 0:
+                    # No point retrying a failed clone
+                    retry = False
 
-            self.mc.set(key, "updated", time=60)
+            if result.returncode == 0:
+                result = self.run_many([
+                    ['git', '-c', 'core.askpass=true', 'fetch', '--all'],
+                    ['git', '-c', 'core.askpass=true', 'fetch', '--tags', '--progress', 'origin', 'refs/pull/*:refs/remotes/origin/pr/*'],
+                    ['git', '-c', 'core.askpass=true', 'pull', '--all']
+                ])
 
-            if result.returncode != 0:
+        if result.returncode > 0:
+            app.logger.info("There was a problem updating an existing repo: %s" % result)
+            if retry:
+                # Something went wrong. Nuke the repo and try again
+                app.logger.info("Clearing folder %s and trying again" % self.path)
+                shutil.rmtree(self.path)
+                self.update(retry=False)
+            else:
+                app.logger.error("We've already retried, giving up")
+                self.mc.set(key, "invalid", time=60)
+                raise Exception("Repository %s is unavailable or invalid" % self.url)
+
+            if result.returncode == 0:
+                self.mc.set(key, "updated", time=60)
+            else:
                 app.logger.warn(result)
                 self.mc.set(key, "invalid", time=60)
                 raise Exception("Repository %s is unavailable or invalid" % self.url)
@@ -70,22 +73,32 @@ class Repository:
 
     def get_commit(self, rev):
         self.update()
-        if full_sha1_pattern.match(rev):
-            result = self.run(["git", 'cat-file', "-t", rev])
-            if result.returncode > 0:
-                app.logger.info("commit not found, trying to fetch specific one in case it's a github merge from a PR")
-                result = self.run(["git", "-c", 'core.askpass=true',"fetch",  "origin", rev])
-                if result.returncode == 0:
-                    return Commit(self, result.stdout.decode('utf-8').strip(), mc=self.mc)
 
-        result = self.run(["git", '-c', 'core.askpass=true', "rev-parse", rev])
+        #result = self.run(["git", 'cat-file', "-t", rev])
+        #if result.returncode > 0:
+        #    app.logger.info("commit not found, trying to fetch in case its a remote branch")
+        #    result = self.run(["git", "-c", 'core.askpass=true',"fetch",  "origin", rev])
+        #    if result.returncode == 0:
+        #        return Commit(self, result.stdout.decode('utf-8').strip(), mc=self.mc)
+
+        result = self.run(["git", "rev-parse", rev])
         if result.returncode > 0:
-            result = self.run(["git", '-c', 'core.askpass=true', "rev-parse", "origin/" + rev])
+            result = self.run(["git", "rev-parse", "origin/" + rev])
         if result.returncode == 0:
             return Commit(self, result.stdout.decode('utf-8').strip(), mc=self.mc)
 
         app.logger.warn("Reference %s not found, path %s" % (rev, self.path))
         raise Exception("Reference %s not found, please try again later if you're sure it exists" % rev)
+
+    def run_many(self, argss):
+        result = None
+        for args in argss:
+            result = self.run(args)
+            if result.returncode > 0:
+                break
+        return result
+
+
 
     def run(self, args):
         result = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=self.path)
