@@ -1,4 +1,4 @@
-import subprocess
+import subprocess, os
 from app.util import memcached
 from ..util.cache_folder import CacheFolder
 from .commit import Commit
@@ -29,6 +29,11 @@ class Repository:
                     if cached == "invalid":
                         raise Exception("Repository %s is unavailable or invalid" % self.url)
                     return
+
+
+            if not os.path.isdir(self.path):
+                app.logger.warn("For some reason the directory doesn't exists - create it")
+                os.makedirs(self.path, exist_ok=True)
 
             app.logger.info("Updating repo %s" % self.url)
             result = self.run(['git', '-c', 'core.askpass=true', 'status'])
