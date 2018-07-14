@@ -15,7 +15,7 @@ class TestHasher(unittest.TestCase):
     def test_hashes(self):
         hashes = self.hasher.get_hashes(self.test_path)
         self.assertEqual(hashes['app2/other_content.txt'], 'b23ba9792bd3944aa8c52c0e25351bf9e6641d74')
-        self.assertEqual(len(hashes), 9)
+        self.assertEqual(len(hashes), 10)
 
         self.mc.get.assert_any_call(self.mc_key)
         self.mc.set.assert_any_call(self.mc_key, hashes)

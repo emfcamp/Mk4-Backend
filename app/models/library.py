@@ -6,18 +6,17 @@ from ..util.metadata_parser import MetadataParser
 from ..util.validation_error import ValidationError
 from ..flask_shared import app
 
-lib_path_pattern = re.compile(r"^libs/([a-zA-Z0-9_\-]{2,20})\.py$")
 app_path_pattern = re.compile(r"([a-zA-Z0-9_\-]{2,20})/([a-zA-Z0-9_\/\-\.]{2,40})$")
-lib_metadata_rules = {
-    'description': {'type': 'string', 'required': True, 'min': 5, 'max': 200},
-    'dependencies': {'type': 'list', 'default': [], 'max': 10},
-    'license': {'type': 'string', 'required': True, 'min':1, 'max': 140}
+dependency_metadata_rules = {
+    'docstring': {'type': 'docstring', 'required': True, 'min': 5, 'max': 200},
+    'dependencies': {'type': 'list', 'default': [], 'max': 10}
 }
 app_metadata_rules = {
-    'description': {'type': 'string', 'required': True, 'min': 5, 'max': 200},
+    'docstring': {'type': 'docstring', 'required': True, 'min': 5, 'max': 200},
     'categories': {'type': 'list', 'min': 1, 'max': 3},
     'dependencies': {'type': 'list', 'default': [], 'max': 10},
-    'built-in': {'type': 'boolean', 'default': False},
+    'launchable': {'type': 'boolean', 'default': True},
+    'bootstrapped': {'type': 'boolean', 'default': False},
     'license': {'type': 'string', 'required': True, 'min':1, 'max': 140}
 }
 max_app_size_before_dependencies = 30000 # we should really get this down
@@ -38,34 +37,30 @@ class Library:
         key = "library_parse::" + self.commit_id
         cached_result = self.mc.get(key)
         if cached_result:
-            [self.apps, self.libs, self.errors] = cached_result;
+            [self.apps, self.dependencies, self.errors] = cached_result;
             return
 
         hashes = self.hasher.get_hashes(self.path)
         hashes = {k: v for k, v in hashes.items() if "/" in k}
 
-        libs = {}
+        dependencies = {}
         apps = {}
         errors = []
 
         for path, hash in hashes.items():
             full_path = "%s/%s" % (self.path, path)
             size = self.sizer.get_size(full_path)
-            if path.startswith("libs/"):
-                # validate filename
-                matches = lib_path_pattern.match(path)
-                if not matches:
-                    errors.append(ValidationError(path, "Library file validation failed: %s is not a valid library file name" % path))
-                    continue
-
-                result = self.metadata_parser.parse(full_path, path, lib_metadata_rules)
+            if path.startswith("lib/"):
+                result = self.metadata_parser.parse(full_path, path, dependency_metadata_rules)
                 if isinstance(result, list):
                     errors.extend(result)
                     continue
-
-                libs[matches.group(1)] = result
-                libs[matches.group(1)]['hash'] = hash
-                libs[matches.group(1)]['size'] = size
+                dependencies[path] = result
+                dependencies[path]['dependencies'] = self.normalize_dependencies(dependencies[path]['dependencies'])
+                dependencies[path]['hash'] = hash
+                dependencies[path]['size'] = size
+            elif path.startswith("shared/"):
+                dependencies[path] = {'hash': hash, 'size': size, 'dependencies': []}
             else:
                 matches = app_path_pattern.match(path)
                 if not matches:
@@ -84,30 +79,31 @@ class Library:
                         errors.extend(result)
                         continue
                     apps[app_name].update(result)
+                    apps[app_name]['dependencies'] = self.normalize_dependencies(apps[app_name]['dependencies'])
 
                 apps[app_name]['files'][path] = hash
                 apps[app_name]['size'] += size
 
-        # validate lib dependencies
-        for lib, info in libs.items():
-            dependencies_not_found = [d for d in info['dependencies'] if d not in libs]
+        # validate dependencies
+
+        for dependency, info in dependencies.items():
+            info['files'] = {}
+            dependency = self.normalize_dependency(dependency)
+            dependencies_not_found = [d for d in info['dependencies'] if d not in dependencies]
             if dependencies_not_found:
-                errors.append(ValidationError('libs/%s.py' % lib, "Dependencies not found: %s" % dependencies_not_found))
+                errors.append(ValidationError(dependency, "Dependencies not found: %s" % dependencies_not_found))
                 continue
 
-
             # resolve dependencies
-            info['files'] = {}
-            to_be_added = set([lib])
+            to_be_added = set([dependency])
             resolved_dependencies = set()
             while len(to_be_added) > 0:
-                l = to_be_added.pop()
-                path = "libs/%s.py" % l
+                path = to_be_added.pop()
                 info['files'][path] = hashes[path]
-                resolved_dependencies.add(l)
-                for required_lib in libs[l]['dependencies']:
-                    if required_lib not in resolved_dependencies:
-                        to_be_added.add(required_lib)
+                resolved_dependencies.add(path)
+                for required_dependency in dependencies[path]['dependencies']:
+                    if required_dependency not in resolved_dependencies:
+                        to_be_added.add(required_dependency)
 
         # resolve app dependencies and check size
         for app, info in apps.items():
@@ -122,24 +118,34 @@ class Library:
 
             if 'dependencies' in info:
                 for dependency in info['dependencies']:
-                    if dependency not in libs:
+                    dependency = self.normalize_dependency(dependency)
+                    if dependency not in dependencies:
                         errors.append(ValidationError(main_file, "Dependency not found: %s" % dependency))
                         continue
 
                     for dependency in info['dependencies']:
-                        info['files'].update(libs[dependency]['files'])
+                        dependency = self.normalize_dependency(dependency)
+                        info['files'].update(dependencies[dependency]['files'])
 
         if errors:
             self.mc.set(key, [None, None, errors])
             # do this at the end to avoid problems in case of a race condition
-            self.libs = None
+            self.dependencies = None
             self.apps = None
             self.errors = errors
         else:
-            self.mc.set(key, [apps, libs, None])
-            self.libs = libs
+            self.mc.set(key, [apps, dependencies, None])
+            self.dependencies = dependencies
             self.apps = apps
             self.errors = None
+
+    def normalize_dependency(self, dependency):
+        if "." not in dependency:
+            return "lib/%s.py" % dependency
+        return dependency
+
+    def normalize_dependencies(self, dependencies):
+        return [self.normalize_dependency(d) for d in dependencies]
 
     def get_compact_errors(self):
         errors = {}

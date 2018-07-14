@@ -1,7 +1,8 @@
-### description: Description of App2
-### categories: CategoryForApp2, SecondaryCategory
-### dependencies: lib2, lib3
-### license: MIT
+"""Description of App2"""
+___categories___ = ["CategoryForApp1", "SecondaryCategory"]
+___bootstraped___ = True
+___dependencies___ = ["lib/lib2.py", "lib/lib3.py"]
+___license___ = "MIT"
 
 import ugfx, pyb, buttons
 

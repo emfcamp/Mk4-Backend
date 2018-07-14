@@ -26,7 +26,7 @@ class TestLibrary(unittest.TestCase):
         self.library.scan()
         self.mc.get.assert_called_once_with("library_parse::abc")
         self.assertEqual(self.library.apps, {'foo':1})
-        self.assertEqual(self.library.libs, {'bar':2})
+        self.assertEqual(self.library.dependencies, {'bar':2})
 
 
     def test_scan_calls_hasher_with_correct_parameters(self):
@@ -39,8 +39,9 @@ class TestLibrary(unittest.TestCase):
             'app1/main.py': 'abc1',
             'app1/something.gif': 'abc2',
             'app2/main.py': 'abc3',
-            'libs/my-lib.py': 'abc4',
-            'libs/other-lib.py': 'cde5'
+            'lib/my-lib.py': 'abc4',
+            'lib/other-lib.py': 'cde5',
+            'shared/some_file.txt': 'ffff'
         })
         def metadata_side_effect(*args, **kwargs):
             if args[0] == '/some/path/app1/main.py':
@@ -52,84 +53,91 @@ class TestLibrary(unittest.TestCase):
             if args[0] == '/some/path/app2/main.py':
                 return {
                     'description': 'foo2',
-                    'dependencies': ['my-lib', 'other-lib'],
+                    'dependencies': ['my-lib', 'other-lib', "shared/some_file.txt"],
                     'built-in': False
                 }
-            if args[0] == '/some/path/libs/my-lib.py':
+            if args[0] == '/some/path/lib/my-lib.py':
                 return {
                     'description': 'my-lib',
-                    'dependencies': ['other-lib']
+                    'dependencies': ['lib/other-lib.py']
                 }
-            if args[0] == '/some/path/libs/other-lib.py':
+            if args[0] == '/some/path/lib/other-lib.py':
                 return {
                     'description': 'other-lib',
                     'dependencies': []
                 }
         self.metadata_parser.parse = Mock(side_effect=metadata_side_effect)
         self.library.scan()
-        self.assertEqual(self.library.libs, {
-            'my-lib': {
-                'dependencies': ['other-lib'],
+        self.assertEqual(self.library.dependencies, {
+            'lib/my-lib.py': {
+                'dependencies': ['lib/other-lib.py'],
                 'description': 'my-lib',
                 'hash': 'abc4',
                 'size': 101,
-                'files': {'libs/my-lib.py': 'abc4', 'libs/other-lib.py': 'cde5'}
+                'files': {'lib/my-lib.py': 'abc4', 'lib/other-lib.py': 'cde5'}
             },
-            'other-lib': {
+            'lib/other-lib.py': {
                 'dependencies': [],
                 'description': 'other-lib',
                 'hash': 'cde5',
                 'size': 101,
-                'files': {'libs/other-lib.py': 'cde5'}
+                'files': {'lib/other-lib.py': 'cde5'}
+            },
+            'shared/some_file.txt': {
+                'dependencies': [],
+                'hash': 'ffff',
+                'size': 101,
+                'files': {'shared/some_file.txt': 'ffff'}
             }
         })
         self.assertEqual(self.library.apps, {
             'app1': {
-                'dependencies': ['my-lib'],
+                'dependencies': ['lib/my-lib.py'],
                 'description': 'foo1',
                 'built-in': True,
                 'size': 202,
                 'files': {
                     'app1/main.py': 'abc1',
                     'app1/something.gif': 'abc2',
-                    'libs/my-lib.py': 'abc4',
-                    'libs/other-lib.py': 'cde5'
+                    'lib/my-lib.py': 'abc4',
+                    'lib/other-lib.py': 'cde5'
                 },
             },
             'app2': {
-                'dependencies': ['my-lib', 'other-lib'],
+                'dependencies': ['lib/my-lib.py', 'lib/other-lib.py', 'shared/some_file.txt'],
                 'description': 'foo2',
                 'built-in': False,
                 'size': 101,
                 'files': {
                     'app2/main.py': 'abc3',
-                    'libs/my-lib.py': 'abc4',
-                    'libs/other-lib.py': 'cde5'
+                    'lib/my-lib.py': 'abc4',
+                    'lib/other-lib.py': 'cde5',
+                    'shared/some_file.txt': 'ffff'
                 }
             }
         })
 
-        self.sizer.get_size.assert_any_call('/some/path/libs/other-lib.py')
-        self.sizer.get_size.assert_any_call('/some/path/libs/my-lib.py')
+        self.sizer.get_size.assert_any_call('/some/path/lib/other-lib.py')
+        self.sizer.get_size.assert_any_call('/some/path/lib/my-lib.py')
         self.sizer.get_size.assert_any_call('/some/path/app1/main.py')
         self.sizer.get_size.assert_any_call('/some/path/app1/something.gif')
         self.sizer.get_size.assert_any_call('/some/path/app2/main.py')
-        self.mc.set.assert_called_once_with("library_parse::abc", [self.library.apps, self.library.libs, None])
+        self.mc.set.assert_called_once_with("library_parse::abc", [self.library.apps, self.library.dependencies, None])
 
     def test_scan_lib_depency_failure(self):
         self.hasher.get_hashes = Mock(return_value={
-            'libs/my-lib.py': 'abc4'
+            'lib/my-lib.py': 'abc4'
         })
         def metadata_side_effect(*args, **kwargs):
-            if args[0] == '/some/path/libs/my-lib.py':
+            if args[0] == '/some/path/lib/my-lib.py':
                 return {
                     'description': 'fail',
-                    'dependencies': ['some-unkown-lib']
+                    'dependencies': ['lib/some-unkown-lib.py']
                 }
         self.metadata_parser.parse = Mock(side_effect=metadata_side_effect)
         self.library.scan()
         self.assertSequenceEqual(self.library.errors, [
-            ValidationError('libs/my-lib.py', "Dependencies not found: ['some-unkown-lib']")
+            ValidationError('lib/my-lib.py', "Dependencies not found: ['lib/some-unkown-lib.py']")
         ])
 
     def test_scan_app_main_file_not_found(self):
@@ -144,7 +152,6 @@ class TestLibrary(unittest.TestCase):
                 }
         self.metadata_parser.parse = Mock(side_effect=metadata_side_effect)
         self.library.scan()
-        print(self.library.apps, self.library.libs)
         self.assertSequenceEqual(self.library.errors, [
             ValidationError('app1/main.py', 'main.py file not provided')
         ])
@@ -162,7 +169,7 @@ class TestLibrary(unittest.TestCase):
         self.metadata_parser.parse = Mock(side_effect=metadata_side_effect)
         self.library.scan()
         self.assertSequenceEqual(self.library.errors, [
-            ValidationError('app1/main.py', "Dependency not found: some-unkown-lib")
+            ValidationError('app1/main.py', "Dependency not found: lib/some-unkown-lib.py")
         ])
 
     def test_scan_app_size_failure(self):
@@ -180,15 +187,6 @@ class TestLibrary(unittest.TestCase):
         self.library.scan()
         self.assertSequenceEqual(self.library.errors, [
             ValidationError('app1/main.py', 'App app1 is a total of 999999999 bytes, allowed maximum is 30000')
-        ])
-
-    def test_scan_validation_lib_filename(self):
-        self.hasher.get_hashes = Mock(return_value={
-            'libs/invalid.pyx': 'abc'
-        })
-        self.library.scan()
-        self.assertSequenceEqual(self.library.errors, [
-            ValidationError('libs/invalid.pyx', 'Library file validation failed: libs/invalid.pyx is not a valid library file name')
         ])
 
     def test_scan_invalid_path(self):

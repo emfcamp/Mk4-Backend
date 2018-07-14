@@ -11,7 +11,7 @@ class TestSizer(unittest.TestCase):
 
     def test_default_relative_path(self):
         path = os.path.normpath(os.path.dirname(os.path.realpath(__file__)) + "/../fixtures/library/app1/main.py")
-        self.assertEqual(self.sizer.get_size(path), 320)
+        self.assertEqual(self.sizer.get_size(path), 339)
 
 if __name__ == '__main__':
     unittest.main()

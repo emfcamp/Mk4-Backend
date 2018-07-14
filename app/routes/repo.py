@@ -16,7 +16,7 @@ def repo_reference():
     if library.errors:
         return handle_ref_error(library)
 
-    return jsonify({'commit_id': library.commit_id, 'libs': library.libs, 'apps': library.apps})
+    return jsonify({'commit_id': library.commit_id, 'dependencies': library.dependencies, 'apps': library.apps})
 
 @repo_routes.route("/check")
 def repo_check():

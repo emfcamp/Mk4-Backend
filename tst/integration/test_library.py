@@ -15,8 +15,7 @@ class TestLibraryIntegration(unittest.TestCase):
 
     def test_scan(self):
         self.library.scan()
-        print(self.library.libs)
-        self.assertEqual(set(self.library.libs.keys()), set(["lib1", "lib2", "lib3", "lib4", "lib5"]))
+        self.assertEqual(set(self.library.dependencies.keys()), set(["lib/lib1.py", "lib/lib2.py", "lib/lib3.py", "lib/lib4.py", "lib/lib5.py", "shared/foo.txt"]))
 
 
 if __name__ == '__main__':
