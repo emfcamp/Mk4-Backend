@@ -42,7 +42,7 @@ class IntegrationTestHttp(FlaskTestCase):
 
     def test_categories(self):
         data = self.get_json("/apps?repo=%s&ref=%s" % (self.url, "52d8ded"))
-        self.assertEqual(data['Other'], ['home', 'sponsors'])
+        self.assertEqual(set(data['Other']), set(['home', 'sponsors']))
 
     def test_install(self):
         data = self.get_json("/install?repo=%s&ref=%s&apps=home,snake" % (self.url, "52d8ded"))
