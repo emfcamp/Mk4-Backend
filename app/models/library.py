@@ -14,6 +14,7 @@ dependency_metadata_rules = {
 app_metadata_rules = {
     'docstring': {'type': 'docstring', 'required': True, 'min': 5, 'max': 200},
     'categories': {'type': 'list', 'min': 1, 'max': 3},
+    'name': {'type': 'string', 'min': 3, 'max': 20},
     'dependencies': {'type': 'list', 'default': [], 'max': 10},
     'launchable': {'type': 'boolean', 'default': True},
     'bootstrapped': {'type': 'boolean', 'default': False},
