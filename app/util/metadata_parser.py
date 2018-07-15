@@ -16,6 +16,8 @@ class MetadataParser:
             return self.parse_str(file.read(), name, rules)
 
     # returns a dict in case of success and a list of errors otherwise
+    # Todo: fix this so the typ of a field is implicit due to its value rather than having to be
+    #       defined upfront
     def parse_str(self, input, name, rules):
         result = {}
         errors = []
