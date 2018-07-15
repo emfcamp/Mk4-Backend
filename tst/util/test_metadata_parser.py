@@ -51,9 +51,7 @@ ___dependencies___ = ["lib2", "lib3"]
 ___categories___ = ["CategoryForApp1", "SecondaryCategory"]
 ___dependencies___ = ["lib2", "lib3"]
 """, "foo.py", self.rules)
-        self.assertEqual(result, [
-            ValidationError('foo.py', 'docstring metadata field has a maximum length of 20, provided: 45')
-        ])
+        self.assertEqual(result['docstring'], 'aasdfasdfasdfasdfasd...')
 
     def test_parse_list_too_short(self):
         result = self.parser.parse_str("""\"\"\"Some description\"\"\"

@@ -62,8 +62,11 @@ class MetadataParser:
                     errors.append(ValidationError(name, "%s metadata field has a minimum length of %d, provided: %d" % (key, rule['min'], len(result[key]))))
                     continue
                 if ('max' in rule) and len(result[key]) > rule['max']:
-                    errors.append(ValidationError(name, "%s metadata field has a maximum length of %d, provided: %d" % (key, rule['max'], len(result[key]))))
-                    continue
+                    if rule['type'] in ['string', 'docstring']:
+                        result[key] = result[key][:rule['max']] + '...'
+                    else:
+                        errors.append(ValidationError(name, "%s metadata field has a maximum length of %d, provided: %d" % (key, rule['max'], len(result[key]))))
+                        continue
             else:
                 if 'required' in rule and rule['required']:
                     errors.append(ValidationError(name, "%s metadata field is required but not found" % key))
