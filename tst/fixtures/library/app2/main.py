@@ -1,5 +1,5 @@
 """Description of App2"""
-___categories___ = ["CategoryForApp1", "SecondaryCategory"]
+___categories___ = ["CategoryForApp2", "SecondaryCategory"]
 ___bootstraped___ = True
 ___dependencies___ = ["lib/lib2.py", "lib/lib3.py"]
 ___license___ = "MIT"

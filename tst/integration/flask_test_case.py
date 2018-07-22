@@ -12,5 +12,7 @@ class FlaskTestCase(unittest.TestCase):
         None
 
     def get_json(self, path):
-        response = self.client.get(path)
-        return json.loads(response.get_data(as_text=True))
+        return json.loads(self.get(path))
+
+    def get(self, path):
+        return self.client.get(path).get_data(as_text=True)
