@@ -35,6 +35,8 @@ class Library:
             if 'categories' in app:
                 for category in app['categories']:
                     categories.setdefault(category, []).append(app_name)
+        for apps in categories.values():
+            apps.sort()
         return categories
 
     def get_error_summary(self):

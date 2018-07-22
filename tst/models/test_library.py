@@ -87,7 +87,7 @@ class TestLibrary(unittest.TestCase):
     def test_categories(self):
         self.assertDictEqual(self.library.categories, {
             'CategoryForApp2': ['app2'],
-            'SecondaryCategory': ['app2', 'app1'],
+            'SecondaryCategory': ['app1', 'app2'],
             'CategoryForApp1': ['app1']
         })
 
