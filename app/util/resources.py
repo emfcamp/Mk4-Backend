@@ -30,58 +30,9 @@ This module has the following operations:
 resources = get_resources(path) # Gets resources for a given path
 add_hashes(path, resources)     # Adds hashes to the file dict - not needed for testing
 add_metadata(path, resources)   # Adds metadata
-resolve_dependencies(resources) # Merges all dependencies into each resource's file dict
 validate(resources)             # Runs basic validation
-
-This module encapsulates all the main operations the app library is expect to
-perform on a given checkout. It's intentionally kept in one file to make it easier
-to share between repositories. The only exception to this rule it metadata_reader
-(because it's rather complex and I didn't want to make this file impossible to read)
-
-Please make sure this file can be executes on any operating system running python3.
-Don't include any external dependencies. It forms part of the local toolchain.
-"""
-
-"""
-scan(path)
-
-A resource scanner for the Tilda filesystem. Returns a {path: {type:<type>, files:{...}}}
-
-ignored are the following:
-* dotfiles
-* __pycache__
-"""
-"""
-Resources are the basic components of any given library.
-
-supported the following types:
-* lib (files in lib/)
-* shared (file in shared/)
-* app (all other folders in root)
-* root (files in root)
-
-A resource has the following form:
-{
-    "app1": {"type": "app", dependencies: ["lib/lib1.py"], "files": {"app1/main.py": "abcdef1234", "app1/nested/text.txt": "abcdef1234"}},
-    "app2": {"type": "app", dependencies: ["lib/lib2.py"], "files": {"app2/main.py": "abcdef1234", "app2/other_content.txt": "abcdef1234", "app2/some_binary_file.gif": "abcdef1234"}},
-    "lib/lib1.py": {"type": "lib", , dependencies: ["lib/lib3.py"], "files": {"lib/lib1.py": "abcdef1234"}},
-    "lib/lib2.py": {"type": "lib", "files": {"lib/lib2.py": "abcdef1234"}},
-    "lib/lib3.py": {"type": "lib", "files": {"lib/lib3.py": "abcdef1234"}},
-    "lib/lib4.py": {"type": "lib", "files": {"lib/lib4.py": "abcdef1234"}},
-    "lib/lib5.py": {"type": "lib", "files": {"lib/lib5.py": "abcdef1234"}},
-    "shared/foo.txt": {"type": "shared", "files": {"shared/foo.txt": "abcdef1234"}},
-    "boot.py": {"type": "root", "files": {"boot.py": "abcdef1234"}}
-}
-
-Every resource can also contain other metadata fields which are extracted from the body
-of its main python class (in case of lib or app).
-
-This module has the following operations:
-resources = get_resources(path) # Gets resources for a given path
-add_hashes(path, resources)     # Adds hashes to the file dict - not needed for testing
-add_metadata(path, resources)   # Adds metadata
 resolve_dependencies(resources) # Merges all dependencies into each resource's file dict
-validate(path, resources)             # Runs basic validation
+remove_upip(resources)          # Remove upip resources from dict again
 
 This module encapsulates all the main operations the app library is expect to
 perform on a given checkout. It's intentionally kept in one file to make it easier
@@ -122,14 +73,26 @@ def get_resources(path):
         if sub_path.startswith(".") or sub_path == "__pycache__":
             continue
         full_path = os.path.join(path, sub_path)
+        if os.path.islink(full_path):
+            continue
         if os.path.isfile(full_path):
             result[sub_path] = {"type": "root", "files": {sub_path: None}}
             continue
-        files = _scan_files(full_path, sub_path)
         if sub_path in ["lib", "shared"]:
+            files = _scan_files(full_path, sub_path)
             for rel_path in files:
                 result[rel_path] = {"type": sub_path, "files": {rel_path: None}}
+        elif sub_path == "upip":
+            for upip_lib in os.listdir(full_path):
+                if upip_lib.startswith(".") or upip_lib == "__pycache__":
+                    continue
+                full_lib_path = os.path.join(full_path, upip_lib)
+                files = {}
+                for rel_path in _scan_files(full_lib_path, os.path.join(sub_path, upip_lib)):
+                    files[rel_path] = None
+                result["upip:%s" % upip_lib] = {"type": sub_path, "files": files}
         else:
+            files = _scan_files(full_path, sub_path)
             result[sub_path] = {"type": "app", "files": {}}
             for rel_path in files:
                 result[sub_path]["files"][rel_path] = None
@@ -181,15 +144,9 @@ def add_metadata(path, resources):
 def _normalize_metadata(metadata):
     metadata['description'] = metadata.pop('doc')
     if 'dependencies' in metadata:
-        metadata['dependencies'] = [_normalize_lib(l) for l in metadata.pop('dependencies')]
+        metadata['dependencies'] = [normalize_dependency(l) for l in metadata.pop('dependencies')]
 
     return metadata
-
-def _normalize_lib(lib):
-    """lib dependencies can be shortened to just their module name"""
-    if "." in lib or "/" in lib:
-        return lib
-    return "lib/%s.py" % lib
 
 """
 resolve_dependencies(resources)
@@ -245,6 +202,21 @@ def _validate_resource(path, resource):
         if 'categories' not in resource or (not isinstance(resource['categories'], list)) or len(resource['categories']) == 0:
             resource.setdefault("errors", []).append("___categories___ list is required in main.py but not found")
 
+
+"""
+remove_upip(resources)
+
+upip adds over a 100 resources to the list. Some of them have broken validation as well, so it's
+useful to remove them after resolving dependencies.
+"""
+def remove_upip(resources):
+    to_delete = []
+    for key, resource in resources.items():
+        if resource['type'] == "upip":
+            to_delete.append(key)
+    for key in to_delete:
+        del resources[key]
+
 """
 helpers
 """
@@ -259,7 +231,13 @@ def get_error_summary(resources):
             summary += "\n"
     return summary.strip()
 
+def pretty_print_resources(resources):
+    import json
+    return json.dumps(resources, indent=4)
 
-
-
+def normalize_dependency(dependency):
+    """lib dependencies can be shortened to just their module name"""
+    if "." in dependency or "/" in dependency:
+        return dependency
+    return "lib/%s.py" % dependency
 
