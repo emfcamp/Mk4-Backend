@@ -88,8 +88,12 @@ def get_resources(path):
                     continue
                 full_lib_path = os.path.join(full_path, upip_lib)
                 files = {}
-                for rel_path in _scan_files(full_lib_path, os.path.join(sub_path, upip_lib)):
-                    files[rel_path] = None
+                if os.path.isfile(full_lib_path):
+                    files = {full_lib_path: None}
+                    upip_lib = upip_lib.rsplit('.', 1)[0]
+                else:
+                    for rel_path in _scan_files(full_lib_path, os.path.join(sub_path, upip_lib)):
+                        files[rel_path] = None
                 result["upip:%s" % upip_lib] = {"type": sub_path, "files": files}
         else:
             files = _scan_files(full_path, sub_path)
@@ -181,6 +185,8 @@ does basic verification:
 """
 def validate(path, resources):
     for resource in resources.values():
+        if resource['type'] == "upip":
+            continue
         _validate_resource(path, resource)
 
 def _validate_resource(path, resource):
@@ -237,7 +243,7 @@ def pretty_print_resources(resources):
 
 def normalize_dependency(dependency):
     """lib dependencies can be shortened to just their module name"""
-    if "." in dependency or "/" in dependency:
+    if "." in dependency or "/" in dependency or "upip:" in dependency:
         return dependency
     return "lib/%s.py" % dependency
 
