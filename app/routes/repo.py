@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, Blueprint, request
+from flask import Flask, jsonify, Blueprint, request, send_from_directory
 from ..models.repository import Repository
 from ..flask_shared import app
 
@@ -62,6 +62,14 @@ def repo_install():
             files[file] = hashcode
 
     return jsonify(files)
+
+@repo_routes.route("/download")
+def repo_download():
+    library = get_library(repo(), ref())
+    if library.has_errors():
+        return handle_error(library)
+
+    return send_from_directory(library.path, required_param("path"))
 
 def repo():
     return required_param("repo")

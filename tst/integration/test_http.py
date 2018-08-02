@@ -46,6 +46,10 @@ class IntegrationTestHttp(FlaskTestCase):
         data = self.get_json("/install?repo=%s&ref=%s&apps=launcher,app_library" % (self.url, success_commit))
         self.assertDictEqual(data, {'app_library/main.py': 'f57620a4d1', 'launcher/main.py': '2b1477ee36', 'lib/buttons.py': '3fc83d019a', 'lib/dialogs.py': '149678101a', 'lib/wifi.py': 'abe69b0fb1'})
 
+    def test_download(self):
+        data = self.get("/download?repo=%s&ref=%s&path=lib/buttons.py" % (self.url, success_commit))
+        self.assertIn("Convenience methods for dealing with the TiLDA buttons", data)
+
     def test_app_info(self):
         data = self.get_json("/app?repo=%s&ref=%s&app=launcher" % (self.url, success_commit))
         print(data)
