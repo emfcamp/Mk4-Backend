@@ -15,7 +15,7 @@ class TestCommit (unittest.TestCase):
         self.commit_id = "886cca8f867919bc02955c763e7f5108b33084b6"
         self.commit = self.repo.get_commit(self.commit_id)
 
-    def notearDown(self):
+    def tearDown(self):
         shutil.rmtree(self.repo.path)
         self.fake_git.clean_up()
         self.commit.clean_up()

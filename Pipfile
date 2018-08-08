@@ -9,6 +9,7 @@ name = "pypi"
 flask = "*"
 simplejson = "*"
 python-memcached = "*"
+requests = "*"
 
 [dev-packages]
 

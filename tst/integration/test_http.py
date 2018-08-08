@@ -17,6 +17,10 @@ class IntegrationTestHttp(FlaskTestCase):
         self.assertTrue("master" in data['refs'])
         self.assertTrue("success" in data['refs'])
 
+    def test_prs(self):
+        data = self.get_json("/prs?repo=%s" % self.url)
+        self.assertTrue(len(data) > 0)
+
     def test_refs_checkout_with_error(self):
         data = self.get("/library?repo=%s&ref=%s" % (self.url, failing_commit))
         self.assertIn("invalid syntax (main.py, line 11)", data)

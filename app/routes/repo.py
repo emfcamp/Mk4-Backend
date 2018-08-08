@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, Blueprint, request, send_from_directory
 from ..models.repository import Repository
+from ..models.github import Github
 from ..flask_shared import app
 
 repo_routes = Blueprint('repo_routes', __name__)
@@ -9,6 +10,11 @@ def repo_home():
     repository = Repository(repo())
     refs = repository.list_references()
     return jsonify({'refs': refs})
+
+@repo_routes.route("/prs")
+def repo_prs():
+    github = Github(repo())
+    return jsonify(github.get_prs())
 
 @repo_routes.route("/library")
 def repo_reference():
