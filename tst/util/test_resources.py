@@ -19,7 +19,9 @@ class TestResourceScanner(unittest.TestCase):
                 "lib/lib4.py": {"type": "lib", "files": {"lib/lib4.py": None}},
                 "lib/lib5.py": {"type": "lib", "files": {"lib/lib5.py": None}},
                 "shared/foo.txt": {"type": "shared", "files": {"shared/foo.txt": None}},
-                "boot.py": {"type": "root", "files": {"boot.py": None}}
+                "boot.py": {"type": "root", "files": {"boot.py": None}},
+                'upip:upip1': {'type': 'upip', 'files': {'upip/upip1.py': None}},
+                'upip:upip2': {'type': 'upip', 'files': {'upip/upip2/f1.py': None, 'upip/upip2/f2.py': None}}
             }
         )
 
