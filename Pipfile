@@ -5,7 +5,8 @@ verify_ssl = false
 name = "pypi"
 
 [packages]
-
+gunicorn = "*"
+eventlet = "*"
 flask = "*"
 simplejson = "*"
 python-memcached = "*"
