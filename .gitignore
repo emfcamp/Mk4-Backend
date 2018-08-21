@@ -9,3 +9,5 @@ var/*.db
 var/*.ofx
 var/*.log
 .pytest_cache/
+
+.venv
