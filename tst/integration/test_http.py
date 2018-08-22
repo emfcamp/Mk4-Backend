@@ -48,7 +48,17 @@ class IntegrationTestHttp(FlaskTestCase):
 
     def test_install(self):
         data = self.get_json("/install?repo=%s&ref=%s&apps=launcher,app_library" % (self.url, success_commit))
-        self.assertDictEqual(data, {'app_library/main.py': 'f57620a4d1', 'launcher/main.py': '2b1477ee36', 'lib/buttons.py': '3fc83d019a', 'lib/dialogs.py': '149678101a', 'lib/wifi.py': 'abe69b0fb1'})
+        self.assertDictEqual(data, {'app_library/main.py': 'f57620a4d1', 'boot.py': 'ff8bc259a2', 'launcher/main.py': '2b1477ee36', 'lib/buttons.py': '3fc83d019a', 'lib/dialogs.py': '149678101a', 'lib/wifi.py': 'abe69b0fb1'})
+
+    def test_bootstrap(self):
+        data = self.get_json("/bootstrap?repo=%s&ref=%s" % (self.url, success_commit))
+        self.assertIn("boot.py", data)
+        self.assertIn("lib/wifi.py", data)
+
+    #def test_flash(self):
+    #    data = self.get_json("/flash?repo=%s&ref=%s" % (self.url, success_commit))
+    #    self.assertIn("boot.py", data)
+    #    self.assertIn("bootstrap/main.py", data)
 
     def test_download(self):
         data = self.get("/download?repo=%s&ref=%s&path=lib/buttons.py" % (self.url, success_commit))

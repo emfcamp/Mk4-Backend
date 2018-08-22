@@ -52,14 +52,6 @@ def repo_app():
 
     return jsonify(library.resources[app])
 
-@repo_routes.route("/install")
-def repo_install():
-    library = get_library(repo(), ref())
-    if library.has_errors():
-        return handle_error(library)
-
-    return get_files(library, required_param('apps').split(","))
-
 @repo_routes.route("/download")
 def repo_download():
     library = get_library(repo(), ref())
@@ -67,6 +59,14 @@ def repo_download():
         return handle_error(library)
 
     return send_from_directory(library.path, required_param("path"))
+
+@repo_routes.route("/install")
+def repo_install():
+    library = get_library(repo(), ref())
+    if library.has_errors():
+        return handle_error(library)
+
+    return get_files(library, required_param('apps').split(","))
 
 @repo_routes.route("/bootstrap")
 def repo_bootstrap():
@@ -78,7 +78,7 @@ def repo_bootstrap():
     return get_files(library, apps)
 
 @repo_routes.route("/flash")
-def repo_built_in():
+def repo_flash():
     library = get_library(repo(), ref())
     if library.has_errors():
         return handle_error(library)
@@ -87,7 +87,7 @@ def repo_built_in():
 
 def get_files(library, apps):
     files = {}
-    for app_name in apps:
+    for app_name in apps + ["boot.py"]:
         if app_name not in library.resources:
             return jsonify({'error': 'app %s not found in library' % app_name}), 404
 
