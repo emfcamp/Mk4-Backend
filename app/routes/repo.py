@@ -58,16 +58,7 @@ def repo_install():
     if library.has_errors():
         return handle_error(library)
 
-    files = {}
-    for app_name in required_param('apps').split(","):
-        if app_name not in library.resources:
-            return jsonify({'error': 'app %s not found in library' % app_name}), 404
-
-        app = library.resources[app_name]
-        for file, hashcode in app['files'].items():
-            files[file] = hashcode
-
-    return jsonify(files)
+    return get_files(library, required_param('apps').split(","))
 
 @repo_routes.route("/download")
 def repo_download():
@@ -76,6 +67,35 @@ def repo_download():
         return handle_error(library)
 
     return send_from_directory(library.path, required_param("path"))
+
+@repo_routes.route("/bootstrap")
+def repo_bootstrap():
+    library = get_library("emfcamp/Mk4-Apps", ref())
+    if library.has_errors():
+        return handle_error(library)
+
+    apps = [name for (name, r) in library.resources.items() if (r['type'] == "app") and r.get("bootstrapped", False)]
+    return get_files(library, apps)
+
+@repo_routes.route("/flash")
+def repo_built_in():
+    library = get_library(repo(), ref())
+    if library.has_errors():
+        return handle_error(library)
+
+    return get_files(library, ["bootstrap"])
+
+def get_files(library, apps):
+    files = {}
+    for app_name in apps:
+        if app_name not in library.resources:
+            return jsonify({'error': 'app %s not found in library' % app_name}), 404
+
+        app = library.resources[app_name]
+        for file, hashcode in app['files'].items():
+            files[file] = hashcode
+
+    return jsonify(files)
 
 def repo():
     return required_param("repo")
