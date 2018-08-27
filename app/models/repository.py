@@ -47,7 +47,7 @@ class Repository:
             if result.returncode == 0:
                 result = self.run_many([
                     ['git', '-c', 'core.askpass=true', 'fetch', '--all'],
-                    ['git', '-c', 'core.askpass=true', 'fetch', '--tags', '--progress', 'origin', 'refs/pull/*:refs/remotes/origin/pr/*'],
+                    ['git', '-c', 'core.askpass=true', 'fetch', '--tags', '--force', '--progress', 'origin', 'refs/pull/*:refs/remotes/origin/pr/*'],
                     ['git', '-c', 'core.askpass=true', 'reset', '--hard', 'origin/master']
                 ])
 
