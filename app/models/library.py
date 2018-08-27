@@ -2,6 +2,7 @@ import subprocess, shutil, os, re
 from ..util.cache_folder import CacheFolder
 from ..flask_shared import app
 from ..util.resources import *
+from .invalid_usage import InvalidUsage
 
 # Abstraction on top of a particular commit
 class Library:
@@ -22,6 +23,7 @@ class Library:
         add_metadata(self.path, resources)
         resolve_dependencies(resources)
         validate(self.path, resources)
+        remove_upip(resources)
 
         self.mc.set(key, resources)
         return resources

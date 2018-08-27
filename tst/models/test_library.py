@@ -3,6 +3,7 @@ import unittest, os, shutil
 from unittest.mock import Mock
 from ..fixtures.fake_git import FakeGit
 from os.path import *
+from app.models.invalid_usage import InvalidUsage
 
 class TestLibrary(unittest.TestCase):
     def setUp(self):

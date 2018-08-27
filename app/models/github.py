@@ -1,12 +1,13 @@
 import requests, re
 from app.util import memcached
+from .invalid_usage import InvalidUsage
 
 repo_pattern = re.compile("([-_\\w]+)\\/([-_.\\w]+)")
 
 class Github:
     def __init__(self, repo, mc=memcached.shared):
         if not re.match(repo_pattern, repo):
-            raise Exception("Invalid repo, please use 'owner/repo_name'")
+            raise InvalidUsage("Invalid repo, please use 'owner/repo_name'")
         self.repo = repo
         self.mc = mc
 

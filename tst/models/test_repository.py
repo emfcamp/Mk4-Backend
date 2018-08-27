@@ -2,6 +2,7 @@ from app.models.repository import Repository
 import unittest, os, shutil
 from unittest.mock import Mock
 from ..fixtures.fake_git import FakeGit
+from app.models.invalid_usage import InvalidUsage
 
 class TestRepository(unittest.TestCase):
     def setUp(self):
@@ -35,7 +36,7 @@ class TestRepository(unittest.TestCase):
 
     def test_update_failure(self):
         self.repo = Repository("https://github.com/does/not/exist.git", mc=self.mc)
-        with self.assertRaises(Exception) as context:
+        with self.assertRaises(InvalidUsage) as context:
             self.repo.update()
         self.assertEqual('Repository https://github.com/does/not/exist.git is unavailable or invalid', str(context.exception))
 
@@ -60,7 +61,7 @@ class TestRepository(unittest.TestCase):
         self.assertEqual(references.id, "886cca8f867919bc02955c763e7f5108b33084b6")
 
     def test_get_commit_failure(self):
-        with self.assertRaises(Exception) as context:
+        with self.assertRaises(InvalidUsage) as context:
             self.repo.get_commit("ffffff")
         self.assertIn('Reference ffffff not found', str(context.exception))
 

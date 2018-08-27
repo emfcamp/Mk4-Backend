@@ -3,12 +3,13 @@ from ..util.cache_folder import CacheFolder
 from ..flask_shared import app
 from .library import Library
 from ..util.lock_pool import shared_lock
+from .invalid_usage import InvalidUsage
 
 class Commit:
     def __init__(self, repository, id, mc):
         self.repository = repository
         if len(id) < 5:
-            raise Exception("Git id '%s' is invalid" % (id))
+            raise InvalidUsage("Git id '%s' is invalid" % (id))
         self.id = id
         self.mc = mc
         self.path = CacheFolder().get_path("ref_" + self.id)
@@ -23,8 +24,7 @@ class Commit:
                 shutil.copytree(self.repository.path, self.path)
                 result = self.run(["git", 'checkout', self.id])
                 if result.returncode > 0:
-                    print(result)
-                    raise Exception("Error while trying to checkout %s from repo %s" % (self.id, self.repository.url))
+                    raise InvalidUsage("Error while trying to checkout %s from repo %s" % (self.id, self.repository.url))
                 try:
                     os.remove(self.path + "/.gitignore")
                 except OSError:

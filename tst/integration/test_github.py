@@ -1,6 +1,8 @@
 import unittest
 from app.models.github import Github
 from unittest.mock import Mock
+from app.models.invalid_usage import InvalidUsage
+
 
 failing_commit = "a72c20ff"
 success_commit = "992d00dc0"
@@ -15,7 +17,7 @@ class IntegrationTestGithub(unittest.TestCase):
         self.github = Github(repo, self.mc)
 
     def test_invalid_repo(self):
-        with self.assertRaises(Exception) as context:
+        with self.assertRaises(InvalidUsage) as context:
             Github("ffff", self.mc)
         self.assertIn("Invalid repo", str(context.exception))
 

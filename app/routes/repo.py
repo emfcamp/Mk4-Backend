@@ -2,8 +2,15 @@ from flask import Flask, jsonify, Blueprint, request, send_from_directory
 from ..models.repository import Repository
 from ..models.github import Github
 from ..flask_shared import app
+from ..models.invalid_usage import InvalidUsage
 
 repo_routes = Blueprint('repo_routes', __name__)
+
+@app.errorhandler(InvalidUsage)
+def handle_invalid_usage(error):
+    response = jsonify(error.to_dict())
+    response.status_code = error.status_code
+    return response
 
 @repo_routes.route("/refs")
 def repo_home():
@@ -106,7 +113,7 @@ def ref():
 def required_param(name):
     result = request.args.get(name)
     if not result:
-        raise Exception("Query parameter '%s' is required" % name)
+        raise InvalidUsage("Query parameter '%s' is required" % name)
     return result
 
 def get_library(repo, ref):

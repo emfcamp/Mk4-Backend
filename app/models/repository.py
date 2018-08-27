@@ -5,6 +5,7 @@ from .commit import Commit
 from ..flask_shared import app
 import re, hashlib, shutil
 from ..util.lock_pool import shared_lock
+from .invalid_usage import InvalidUsage
 
 class Repository:
     def __init__(self, url, mc=memcached.shared):
@@ -24,10 +25,11 @@ class Repository:
         with shared_lock(key):
             if not force:
                 cached = self.mc.get(key)
+                app.logger.debug("repository.update() cached: %s" % cached)
                 if cached:
                     # skipping update since we've already done so recently
                     if cached == "invalid":
-                        raise Exception("Repository %s is unavailable or invalid" % self.url)
+                        raise InvalidUsage("Repository %s is unavailable or invalid" % self.url)
                     return
 
 
@@ -61,14 +63,16 @@ class Repository:
             else:
                 app.logger.error("We've already retried, giving up")
                 self.mc.set(key, "invalid", time=60)
-                raise Exception("Repository %s is unavailable or invalid" % self.url)
+                raise InvalidUsage("Repository %s is unavailable or invalid" % self.url)
 
             if result.returncode == 0:
                 self.mc.set(key, "updated", time=60)
             else:
                 app.logger.warn(result)
                 self.mc.set(key, "invalid", time=60)
-                raise Exception("Repository %s is unavailable or invalid" % self.url)
+                raise InvalidUsage("Repository %s is unavailable or invalid" % self.url)
+        else:
+            self.mc.set(key, True, time=60)
 
     def list_references(self):
         self.update();
@@ -93,7 +97,7 @@ class Repository:
             return Commit(self, result.stdout.decode('utf-8').strip(), mc=self.mc)
 
         app.logger.warn("Reference %s not found, path %s" % (rev, self.path))
-        raise Exception("Reference %s not found, please try again later if you're sure it exists" % rev)
+        raise InvalidUsage("Reference %s not found, please try again later if you're sure it exists" % rev)
 
     def run_many(self, argss):
         result = None
@@ -103,13 +107,8 @@ class Repository:
                 break
         return result
 
-
-
     def run(self, args):
         result = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=self.path)
         app.logger.debug(result)
         return result
-
-
-
 
