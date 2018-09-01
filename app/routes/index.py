@@ -12,7 +12,7 @@ def hello_world():
     app.logger.info("Hello world")
     return jsonify({"hello": "world"})
 
-@index_routes.route("/poke")
+@index_routes.route("/poke", methods=['POST'])
 def poke():
     app.logger.info("Flush")
     shared.flush_all()
