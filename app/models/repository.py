@@ -62,17 +62,17 @@ class Repository:
                 self.update(retry=False)
             else:
                 app.logger.error("We've already retried, giving up")
-                self.mc.set(key, "invalid", time=60)
+                self.mc.set(key, "invalid", time=5)
                 raise InvalidUsage("Repository %s is unavailable or invalid" % self.url)
 
             if result.returncode == 0:
-                self.mc.set(key, "updated", time=60)
+                self.mc.set(key, "updated", time=3600)
             else:
                 app.logger.warn(result)
-                self.mc.set(key, "invalid", time=60)
+                self.mc.set(key, "invalid", time=5)
                 raise InvalidUsage("Repository %s is unavailable or invalid" % self.url)
         else:
-            self.mc.set(key, True, time=60)
+            self.mc.set(key, True, time=3600)
 
     def list_references(self):
         self.update();
