@@ -20,3 +20,8 @@ def poke():
     shutil.rmtree(normpath(tempfile.gettempdir() + "/badgestore-cache/"))
     app.logger.info("Done")
     return jsonify({"poked": True})
+
+
+@index_routes.route("/poke", methods=['GET'])
+def poke_button():
+    return "<html><head><title>poke</title></headn><body><form method=\"post\"><input type=\"submit\" value=\"poke\" /></form></body><html>"
