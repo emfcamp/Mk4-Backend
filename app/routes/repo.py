@@ -75,6 +75,14 @@ def repo_install():
 
     return get_files(library, required_param('apps').split(","))
 
+@repo_routes.route("/update")
+def repo_update():
+    library = get_library(repo(), ref())
+    if library.has_errors():
+        return handle_error(library)
+
+    return get_files(library, required_param('apps').split(","), allow_missing=True)
+
 @repo_routes.route("/bootstrap")
 def repo_bootstrap():
     library = get_library("emfcamp/Mk4-Apps", ref())
@@ -92,11 +100,14 @@ def repo_flash():
 
     return get_files(library, ["bootstrap"])
 
-def get_files(library, apps):
+def get_files(library, apps, allow_missing=False):
     files = {}
     for app_name in apps + ["boot.py"]:
         if app_name not in library.resources:
-            return jsonify({'error': 'app %s not found in library' % app_name}), 404
+            if allow_missing:
+                continue
+            else:
+                return jsonify({'error': 'app %s not found in library' % app_name}), 404
 
         app = library.resources[app_name]
         for file, hashcode in app['files'].items():

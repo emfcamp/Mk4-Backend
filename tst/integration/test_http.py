@@ -50,6 +50,10 @@ class IntegrationTestHttp(FlaskTestCase):
         data = self.get_json("/install?repo=%s&ref=%s&apps=launcher,app_library" % (self.url, success_commit))
         self.assertDictEqual(data, {'app_library/main.py': 'f57620a4d1', 'boot.py': 'ff8bc259a2', 'launcher/main.py': '2b1477ee36', 'lib/buttons.py': '3fc83d019a', 'lib/dialogs.py': '149678101a', 'lib/wifi.py': 'abe69b0fb1'})
 
+    def test_update(self):
+        data = self.get_json("/update?repo=%s&ref=%s&apps=launcher,app_library,my_awesome_dev_app" % (self.url, success_commit))
+        self.assertDictEqual(data, {'app_library/main.py': 'f57620a4d1', 'boot.py': 'ff8bc259a2', 'launcher/main.py': '2b1477ee36', 'lib/buttons.py': '3fc83d019a', 'lib/dialogs.py': '149678101a', 'lib/wifi.py': 'abe69b0fb1'})
+
     def test_bootstrap(self):
         data = self.get_json("/bootstrap?repo=%s&ref=%s" % (self.url, success_commit))
         self.assertIn("boot.py", data)
